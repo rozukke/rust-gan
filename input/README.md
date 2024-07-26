@@ -1,0 +1,1 @@
+This folder is the default location for demo input and output. Provided is an image titled `lowres.png` that will be used by default for upscaling. The result will be named `highres.png`.
