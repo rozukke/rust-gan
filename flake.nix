@@ -10,31 +10,28 @@
   outputs = { nixpkgs, rust-overlay, flake-utils, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
-        overlays = [ (import rust-overlay)];
+        overlays = [ (import rust-overlay) ];
         pkgs = import nixpkgs {
-          inherit system;
+          inherit system overlays;
           config = {
-            inherit system overlays;
             allowUnfree = true;
-            cudatoolkit = pkgs.cudatoolkit_12;
           };
         };
       in {
-        devShell = pkgs.mkShell {
-          buildInputs = with pkgs; [
+        devShells.default = with pkgs; mkShell {
+          buildInputs = [
             rust-bin.stable.latest.default
+            cudatoolkit
             python3
-            python3Packages.torch # WithCuda
+            python3Packages.torchWithCuda
             python3Packages.torchvision
             python3Packages.opencv4
-            # cudatoolkit_12
           ];
 
-          # shellHook = ''
-            # export CUDA_HOME=${pkgs.cudatoolkit_12}
-            # export PATH=$CUDA_HOME/bin:$PATH
-            # export LD_LIBRARY_PATH=${pkgs.cudatoolkit_12}/lib64:$LD_LIBRARY_PATH
           shellHook = ''
+            # export CUDA_HOME=${pkgs.cudatoolkit}
+            # export PATH=$CUDA_HOME/bin:$PATH
+            # export LD_LIBRARY_PATH=${pkgs.cudatoolkit}/lib64:$LD_LIBRARY_PATH
             echo "Checking PyTorch + CUDA..."
             python3 -c 'import torch; print("CUDA found." if torch.cuda.is_available() else "CUDA not found.")'
           '';
