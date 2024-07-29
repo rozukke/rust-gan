@@ -1,2 +1,10 @@
+# Build artifacts
 /target
 __pycache__
+
+# Result image
+highres.png
+
+# Model files
+*.pth
+*.pth.tar
