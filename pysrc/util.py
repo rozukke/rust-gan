@@ -11,22 +11,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-import os
-import shutil
 from collections import OrderedDict
-from enum import Enum
-from typing import Any
 
 import torch
-import torch.backends.mps
-from torch import distributed as dist
 from torch import nn
-from torch.nn import Module
-from torch.optim import Optimizer
-
-__all__ = [
-    "load_state_dict", "load_pretrained_state_dict"
-]
 
 def load_state_dict(
         model: nn.Module,
@@ -82,7 +70,7 @@ def load_pretrained_state_dict(
         model: nn.Module,
         compile_state: bool,
         model_weights_path: str,
-) -> Module:
+) -> nn.Module:
     """Load pre-trained model weights
 
     Args:

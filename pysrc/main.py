@@ -22,28 +22,15 @@ import model
 from image import preprocess_one_image, tensor_to_image
 from util import load_pretrained_state_dict
 
-def build_model(model_arch_name: str, device: torch.device) -> nn.Module:
-    # Initialize the super-resolution model
-    sr_model = model.__dict__[model_arch_name](in_channels=3,
-                                               out_channels=3,
-                                               channels=64,
-                                               growth_channels=32,
-                                               num_rrdb=23)
-
-    sr_model = sr_model.to(device)
-
-    return sr_model
-
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--inputs",
                         type=str,
-                        default="../input/lowres.png",
+                        default="./input/lowres.png",
                         help="Original image path.")
     parser.add_argument("--output",
                         type=str,
-                        default="../input/highres.png",
+                        default="./input/highres.png",
                         help="Super-resolution image path.")
     parser.add_argument("--model_arch_name",
                         type=str,
@@ -55,7 +42,7 @@ def main():
                         help="Whether to compile the model state.")
     parser.add_argument("--model_weights_path",
                         type=str,
-                        default="../model/ESRGAN_x4-DFO2K-25393df7.pth.tar",
+                        default="./model/ESRGAN_x4-DFO2K-25393df7.pth.tar",
                         help="Model weights file path.")
     parser.add_argument("--half",
                         action="store_true",
@@ -69,10 +56,10 @@ def main():
     device = torch.device(args.device)
 
     # Read original image
-    input_tensor = preprocess_one_image(args.inputs, False, args.half, device)
+    input_tensor = preprocess_one_image(args.inputs, args.half, device)
 
     # Initialize the model
-    sr_model = build_model(args.model_arch_name, device)
+    sr_model = model.RRDBNet().to(device)
     print(f"Build `{args.model_arch_name}` model successfully.")
 
     # Load model weights
@@ -92,7 +79,7 @@ def main():
         sr_tensor = sr_model(input_tensor)
 
     # Save image
-    cr_image = tensor_to_image(sr_tensor, False, args.half)
+    cr_image = tensor_to_image(sr_tensor, args.half)
     cr_image = cv2.cvtColor(cr_image, cv2.COLOR_RGB2BGR)
     cv2.imwrite(args.output, cr_image)
 

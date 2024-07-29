@@ -11,18 +11,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-import os
-from typing import Any, cast, Dict, List, Union
-
 import torch
 from torch import nn, Tensor
 from torch.nn import functional as F_torch
-from torchvision import models, transforms
-from torchvision.models.feature_extraction import create_feature_extractor
-
-__all__ = [
-    "RRDBNet", "rrdbnet_x4"
-]
 
 class RRDBNet(nn.Module):
     def __init__(
@@ -50,34 +41,15 @@ class RRDBNet(nn.Module):
         self.conv2 = nn.Conv2d(channels, channels, (3, 3), (1, 1), (1, 1))
 
         # Upsampling convolutional layer.
-        if upscale == 2:
-            self.upsampling1 = nn.Sequential(
-                nn.Conv2d(channels, channels, (3, 3), (1, 1), (1, 1)),
-                nn.LeakyReLU(0.2, True)
-            )
-        if upscale == 4:
-            self.upsampling1 = nn.Sequential(
-                nn.Conv2d(channels, channels, (3, 3), (1, 1), (1, 1)),
-                nn.LeakyReLU(0.2, True)
-            )
-            self.upsampling2 = nn.Sequential(
-                nn.Conv2d(channels, channels, (3, 3), (1, 1), (1, 1)),
-                nn.LeakyReLU(0.2, True)
-            )
-        if upscale == 8:
-            self.upsampling1 = nn.Sequential(
-                nn.Conv2d(channels, channels, (3, 3), (1, 1), (1, 1)),
-                nn.LeakyReLU(0.2, True)
-            )
-            self.upsampling2 = nn.Sequential(
-                nn.Conv2d(channels, channels, (3, 3), (1, 1), (1, 1)),
-                nn.LeakyReLU(0.2, True)
-            )
-            self.upsampling3 = nn.Sequential(
-                nn.Conv2d(channels, channels, (3, 3), (1, 1), (1, 1)),
-                nn.LeakyReLU(0.2, True)
-            )
-
+        self.upsampling1 = nn.Sequential(
+            nn.Conv2d(channels, channels, (3, 3), (1, 1), (1, 1)),
+            nn.LeakyReLU(0.2, True)
+        )
+        self.upsampling2 = nn.Sequential(
+            nn.Conv2d(channels, channels, (3, 3), (1, 1), (1, 1)),
+            nn.LeakyReLU(0.2, True)
+        )
+        
         # Reconnect a layer of convolution block after upsampling.
         self.conv3 = nn.Sequential(
             nn.Conv2d(channels, channels, (3, 3), (1, 1), (1, 1)),
@@ -87,7 +59,7 @@ class RRDBNet(nn.Module):
         # Output layer.
         self.conv4 = nn.Conv2d(channels, out_channels, (3, 3), (1, 1), (1, 1))
 
-        # Initialize all layer
+        # Initialize all layers
         for module in self.modules():
             if isinstance(module, nn.Conv2d):
                 nn.init.kaiming_normal_(module.weight)
@@ -102,15 +74,8 @@ class RRDBNet(nn.Module):
         x = self.conv2(x)
         x = torch.add(x, conv1)
 
-        if self.upscale == 2:
-            x = self.upsampling1(F_torch.interpolate(x, scale_factor=2, mode="nearest"))
-        if self.upscale == 4:
-            x = self.upsampling1(F_torch.interpolate(x, scale_factor=2, mode="nearest"))
-            x = self.upsampling2(F_torch.interpolate(x, scale_factor=2, mode="nearest"))
-        if self.upscale == 8:
-            x = self.upsampling1(F_torch.interpolate(x, scale_factor=2, mode="nearest"))
-            x = self.upsampling2(F_torch.interpolate(x, scale_factor=2, mode="nearest"))
-            x = self.upsampling3(F_torch.interpolate(x, scale_factor=2, mode="nearest"))
+        x = self.upsampling1(F_torch.interpolate(x, scale_factor=2, mode="nearest"))
+        x = self.upsampling2(F_torch.interpolate(x, scale_factor=2, mode="nearest"))
 
         x = self.conv3(x)
         x = self.conv4(x)
@@ -181,8 +146,3 @@ class _ResidualResidualDenseBlock(nn.Module):
         x = torch.add(x, identity)
 
         return x
-
-def rrdbnet_x4(**kwargs: Any) -> RRDBNet:
-    model = RRDBNet(upscale=4, **kwargs)
-
-    return model

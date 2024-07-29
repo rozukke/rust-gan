@@ -11,8 +11,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-import math
-import random
 from typing import Any
 
 import cv2
@@ -25,12 +23,11 @@ __all__ = [
     "image_to_tensor", "tensor_to_image", "preprocess_one_image",
 ]
 
-def image_to_tensor(image: ndarray, range_norm: bool, half: bool) -> Tensor:
+def image_to_tensor(image: ndarray, half: bool) -> Tensor:
     """Convert the image data type to the Tensor (NCWH) data type supported by PyTorch
 
     Args:
         image (np.ndarray): The image data read by ``OpenCV.imread``, the data range is [0,255] or [0, 1]
-        range_norm (bool): Scale [0, 1] data to between [-1, 1]
         half (bool): Whether to convert torch.float32 similarly to torch.half type
 
     Returns:
@@ -38,15 +35,11 @@ def image_to_tensor(image: ndarray, range_norm: bool, half: bool) -> Tensor:
 
     Examples:
         >>> example_image = cv2.imread("lr_image.bmp")
-        >>> example_tensor = image_to_tensor(example_image, range_norm=True, half=False)
+        >>> example_tensor = image_to_tensor(example_image, half=False)
 
     """
     # Convert image data type to Tensor data type
     tensor = torch.from_numpy(np.ascontiguousarray(image)).permute(2, 0, 1).float()
-
-    # Scale the image data from [0, 1] to [-1, 1]
-    if range_norm:
-        tensor = tensor.mul(2.0).sub(1.0)
 
     # Convert torch.float32 image data type to torch.half image data type
     if half:
@@ -55,12 +48,11 @@ def image_to_tensor(image: ndarray, range_norm: bool, half: bool) -> Tensor:
     return tensor
 
 
-def tensor_to_image(tensor: Tensor, range_norm: bool, half: bool) -> Any:
+def tensor_to_image(tensor: Tensor, half: bool) -> Any:
     """Convert the Tensor(NCWH) data type supported by PyTorch to the np.ndarray(WHC) image data type
 
     Args:
         tensor (Tensor): Data types supported by PyTorch (NCHW), the data range is [0, 1]
-        range_norm (bool): Scale [-1, 1] data to between [0, 1]
         half (bool): Whether to convert torch.float32 similarly to torch.half type.
 
     Returns:
@@ -68,11 +60,9 @@ def tensor_to_image(tensor: Tensor, range_norm: bool, half: bool) -> Any:
 
     Examples:
         >>> example_image = cv2.imread("lr_image.bmp")
-        >>> example_tensor = image_to_tensor(example_image, range_norm=False, half=False)
+        >>> example_tensor = image_to_tensor(example_image, half=False)
 
     """
-    if range_norm:
-        tensor = tensor.add(1.0).div(2.0)
     if half:
         tensor = tensor.half()
 
@@ -81,7 +71,7 @@ def tensor_to_image(tensor: Tensor, range_norm: bool, half: bool) -> Any:
     return image
 
 
-def preprocess_one_image(image_path: str, range_norm: bool, half: bool, device: torch.device) -> Tensor:
+def preprocess_one_image(image_path: str, half: bool, device: torch.device) -> Tensor:
     # read an image using OpenCV
     image = cv2.imread(image_path).astype(np.float32) / 255.0
 
@@ -89,7 +79,7 @@ def preprocess_one_image(image_path: str, range_norm: bool, half: bool, device: 
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
     # Convert RGB image channel data to image formats supported by PyTorch
-    tensor = image_to_tensor(image, range_norm, half).unsqueeze_(0)
+    tensor = image_to_tensor(image, half).unsqueeze_(0)
 
     # Data transfer to the specified device
     tensor = tensor.to(device, non_blocking=True)
