@@ -5,6 +5,10 @@
 
 This is a repository meant to demonstrate running a PyTorch script from a Rust binary with versioning and deployment using Nix.
 
+## Installation
+Tested working on WSL with `Ubuntu-24.04 LTS`. Please ensure that you have the latest version Nvidia driver installed on your
+system (tested with driver version `560.70`). Starting a shell with `nix develop` should print "CUDA found!" to the console.
+
 ## Usage
 For development purposes, use `nix develop` to start a dev shell with all required packages. Place an appropriate model file into the `model` directory.
 Ensure it has a `.pth` extension. Some models may not be able to be loaded, so a working one is provided here (TODO).
