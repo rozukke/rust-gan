@@ -4,6 +4,7 @@ description = "A demo of Rust interop with Python, using advanced packages like 
 authors = ["Artemis Rosman <rozukke@proton.me>"]
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.80"
 
 [dependencies]
 clap = { version = "4.5.11", features = ["derive"] }

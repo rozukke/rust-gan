@@ -2,7 +2,7 @@
   description = "A dev environment for PyTorch with CUDA";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/release-24.05";
     flake-utils.url = "github:numtide/flake-utils";
     rust-overlay.url = "github:oxalica/rust-overlay";
   };
@@ -15,12 +15,14 @@
           inherit system overlays;
           config = {
             allowUnfree = true;
+            cudaSupport = true;
+            cudaVersion = "12";
           };
         };
       in {
         devShells.default = with pkgs; mkShell {
           buildInputs = [
-            rust-bin.stable.latest.default
+            rust-bin.stable."1.80.0".default
             cudatoolkit
             python3
             python3Packages.torchWithCuda
