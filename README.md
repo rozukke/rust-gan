@@ -1,5 +1,5 @@
 # rust-gan
-[![GitHub license](https://img.shields.io/github/license/rozukke/rust-gan.svg)](https://github.com/rozukke/lace/blob/main/LICENSE)
+[![GitHub license](https://img.shields.io/github/license/rozukke/rust-gan.svg)](https://github.com/rozukke/rust-gan/blob/main/LICENSE)
 [![Creator rozukke](https://img.shields.io/badge/Creator-rozukke-f497af.svg)](https://github.com/rozukke)
 [![Made with Rust](https://img.shields.io/badge/Made%20with-Rust-b7410e.svg)](https://www.rust-lang.org)
 
