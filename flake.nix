@@ -30,7 +30,7 @@
             cudatoolkit
             python311
             python311Packages.torch-bin
-            python311Packages.matplotlib
+            python311Packages.pillow
           ];
 
           shellHook = ''
