@@ -11,23 +11,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from PIL import Image
 import torch
-
 import model
 from image import load_image, tensor_to_image
 from util import load_pretrained_state_dict
 
 def infer(input_path, output_path, model_path, device, half_precision):
     device = torch.device(device)
-
-    # Read original image
     input_tensor = load_image(input_path, half_precision, device)
 
-    # Initialize the model
     sr_model = model.RRDBNet().to(device)
-
-    # Load model weights
     sr_model = load_pretrained_state_dict(sr_model, model_path)
 
     # Start the verification mode of the model.
@@ -37,13 +30,9 @@ def infer(input_path, output_path, model_path, device, half_precision):
     if half_precision:
         sr_model.half()
 
-    # Use the model to generate super-resolved images
     with torch.no_grad():
-        # Reasoning
         sr_tensor = sr_model(input_tensor)
 
-    # Save image
+    # Convert back to image and save
     cr_image = tensor_to_image(sr_tensor, half_precision)
-
-    # Save image using PIL
     cr_image.save(output_path)
