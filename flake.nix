@@ -7,6 +7,10 @@
     rust-overlay.url = "github:oxalica/rust-overlay";
   };
 
+  nixConfig = {
+    bash-prompt-prefix = "(cuda-shell) ";
+  };
+
   outputs = { nixpkgs, rust-overlay, flake-utils, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
@@ -16,26 +20,26 @@
           config = {
             allowUnfree = true;
             cudaSupport = true;
-            cudaVersion = "12";
           };
         };
       in {
         devShells.default = with pkgs; mkShell {
           buildInputs = [
             rust-bin.stable."1.80.0".default
+            linuxPackages.nvidia_x11
             cudatoolkit
-            python3
-            python3Packages.torchWithCuda
-            python3Packages.torchvision
-            python3Packages.opencv4
+            python311
+            python311Packages.torch-bin
+            python311Packages.matplotlib
           ];
 
           shellHook = ''
-            # export CUDA_HOME=${pkgs.cudatoolkit}
-            # export PATH=$CUDA_HOME/bin:$PATH
-            # export LD_LIBRARY_PATH=${pkgs.cudatoolkit}/lib64:$LD_LIBRARY_PATH
+            export CUDA_HOME=${pkgs.cudatoolkit}
+            export PATH=$CUDA_HOME/bin:$PATH
+            export LD_LIBRARY_PATH=/usr/lib/wsl/lib:${pkgs.linuxPackages.nvidia_x11}/lib:$LD_LIBRARY_PATH
+            export EXTRA_LDFLAGS="-L/lib -L${pkgs.linuxPackages.nvidia_x11}/lib"
             echo "Checking PyTorch + CUDA..."
-            python3 -c 'import torch; print("CUDA found." if torch.cuda.is_available() else "CUDA not found.")'
+            python3 -c 'import torch; print("CUDA found!" if torch.cuda.is_available() else "CUDA not found.")'
           '';
         };
       }
