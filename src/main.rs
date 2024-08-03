@@ -3,6 +3,7 @@ use pyo3::{prelude::*, types::PyList};
 use std::fs;
 use std::path::Path;
 use tracing::{error, info, span, warn, Level};
+use tracing_subscriber::FmtSubscriber;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -35,21 +36,48 @@ enum Device {
 const DEFAULT_INPUT: &str = "./input/lowres.png";
 const DEFAULT_OUTPUT: &str = "./input/highres.png";
 
-fn main() -> PyResult<()> {
+/// Get model from models folder without having to specify name
+fn search_model(folder_path: &str, extension: &str) -> Option<std::path::PathBuf> {
+    info!("Searching {} for model files...", folder_path);
+    let path = Path::new(folder_path);
+    for entry in fs::read_dir(path).expect("Failed to read directory") {
+        let entry = entry.expect("Failed to read directory entry");
+        let path = entry.path();
+        if path.extension().and_then(|ext| ext.to_str()) == Some(extension) {
+            if let Some(path_str) = path.to_str() {
+                info!("Found model file: {}", path_str);
+            }
+            return Some(path);
+        }
+    }
+    None
+}
+
+fn main() -> Result<(), ()> {
     // Output logs to console
-    tracing::subscriber::set_global_default(tracing_subscriber::FmtSubscriber::new())
+    tracing::subscriber::set_global_default(FmtSubscriber::builder().with_target(false).finish())
         .expect("Could not set stdout as logging output.");
 
     let args = Args::parse();
     let mut use_cpu = args.device == Device::Cpu;
-    let _input_path = args.input.unwrap_or(String::from(DEFAULT_INPUT));
-    let _output_path = args.output.unwrap_or(String::from(DEFAULT_OUTPUT));
+    let input_path = args.input.unwrap_or(String::from(DEFAULT_INPUT));
+    let output_path = args.output.unwrap_or(String::from(DEFAULT_OUTPUT));
+    let model_path = match search_model(concat!(env!("CARGO_MANIFEST_DIR"), "/model"), "pth") {
+        Some(model) => model.into_os_string(),
+        _ => {
+            error!("Could not find suitable model file in 'model' folder. Expected a '.pth' file extension.");
+            return Err(());
+        }
+    };
+    let half_precision = args.half_precision;
 
     // Import Python code from subdir
-    let py_path = Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/pysrc"));
-    let main_src = fs::read_to_string(py_path.join("main.py"))?;
+    let pysrc_path = Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/pysrc"));
+    let infer_src = fs::read_to_string(pysrc_path.join("main.py")).map_err(|err| {
+        error!("Could not open file for reading: {}", err);
+    })?;
 
-    let from_python = Python::with_gil(|py| -> PyResult<Py<PyAny>> {
+    Python::with_gil(|py| -> PyResult<Py<PyAny>> {
         info!("Python initialised successfully.");
         {
             let _check_span = span!(Level::INFO, "ENV CHECKS").entered();
@@ -78,20 +106,39 @@ fn main() -> PyResult<()> {
             }
         }
 
+        let device_str = if use_cpu { "cpu" } else { "cuda:0" };
+
         // Set syspath for relative python imports
         let syspath = py
             .import_bound("sys")?
             .getattr("path")?
             .downcast_into::<PyList>()?;
-        syspath.insert(0, py_path)?;
+        syspath.insert(0, pysrc_path)?;
 
         // Run inference
-        let app: Py<PyAny> = PyModule::from_code_bound(py, &main_src, "main.py", "main")?
-            .getattr("main")?
+        let app: Py<PyAny> = PyModule::from_code_bound(py, &infer_src, "main.py", "main")?
+            .getattr("infer")?
             .into();
-        app.call0(py)
+        info!("Running inference...");
+        app.call1(
+            py,
+            (
+                input_path,
+                &output_path,
+                model_path,
+                device_str,
+                half_precision,
+            ),
+        )
+    })
+    .map_err(|err| {
+        error!("Python execution failed with error {}", err);
     })?;
 
-    info!("Result from python: {}", from_python);
+    let _success = span!(Level::INFO, "SUCCESS").entered();
+    info!(
+        "Inference ran successfully. Image saved to path {}",
+        output_path
+    );
     Ok(())
 }
