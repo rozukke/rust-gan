@@ -19,10 +19,6 @@ import torch
 from numpy import ndarray
 from torch import Tensor
 
-__all__ = [
-    "image_to_tensor", "tensor_to_image", "preprocess_one_image",
-]
-
 def image_to_tensor(image: ndarray, half: bool) -> Tensor:
     """Convert the image data type to the Tensor (NCWH) data type supported by PyTorch
 
