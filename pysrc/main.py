@@ -11,18 +11,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-import cv2
+from PIL import Image
 import torch
 
 import model
-from image import preprocess_one_image, tensor_to_image
+from image import load_image, tensor_to_image
 from util import load_pretrained_state_dict
 
 def infer(input_path, output_path, model_path, device, half_precision):
     device = torch.device(device)
 
     # Read original image
-    input_tensor = preprocess_one_image(input_path, half_precision, device)
+    input_tensor = load_image(input_path, half_precision, device)
 
     # Initialize the model
     sr_model = model.RRDBNet().to(device)
@@ -44,5 +44,6 @@ def infer(input_path, output_path, model_path, device, half_precision):
 
     # Save image
     cr_image = tensor_to_image(sr_tensor, half_precision)
-    cr_image = cv2.cvtColor(cr_image, cv2.COLOR_RGB2BGR)
-    cv2.imwrite(output_path, cr_image)
+
+    # Save image using PIL
+    cr_image.save(output_path)
