@@ -10,8 +10,7 @@ Tested working on WSL with `Ubuntu-24.04 LTS`. Please ensure that you have the l
 system (tested with driver version `560.70`). Starting a shell with `nix develop` should print "CUDA found!" to the console.
 
 ## Usage
-For development purposes, use `nix develop` to start a dev shell with all required packages. Place an appropriate model file into the `model` directory.
-Ensure it has a `.pth` extension. Some models may not be able to be loaded, so a working one is provided here (TODO).
+For development purposes, use `nix develop` to start a dev shell with all required packages. Place an appropriate model file into the `model` directory. One such model can be downloaded [here](https://drive.google.com/file/d/1fCKufxu-a0vewCP1Y_7DP_JmrPxBXYCF/view?usp=sharing). It is recommended to use this model as a specific architecture is required.
 
 ### Inference with shell
 - The executable is in the format `rust-gan [OPTIONS] <DEVICE>`, where the device is either CPU or GPU.
@@ -20,4 +19,4 @@ to use the default input provided (found in `input/lowres.png`, output saved to 
 - Use half precision with the flag `--half-precision`. Will be slower on CPU than full precision.
 
 ### Using Nix package
-- TODO
+- It should be possible to run the nix package using `nix run ./ -- gpu --model /path/to/model`. The package is in a functional state, but isn't currently working 100% as might be expected.
