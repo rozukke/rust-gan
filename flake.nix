@@ -3,7 +3,11 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/release-24.05";
-    flake-utils.url = "github:numtide/flake-utils";
+    systems.url = "github:nix-systems/x86_64-linux";
+    flake-utils = {
+      url = "github:numtide/flake-utils";
+      inputs.systems.follows = "systems";
+    };
     rust-overlay.url = "github:oxalica/rust-overlay";
   };
 
@@ -11,7 +15,7 @@
     bash-prompt-prefix = "(cuda-shell) ";
   };
 
-  outputs = { nixpkgs, rust-overlay, flake-utils, ... }:
+  outputs = { self, nixpkgs, rust-overlay, flake-utils, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         overlays = [ (import rust-overlay) ];
@@ -22,10 +26,35 @@
             cudaSupport = true;
           };
         };
+        _rustToolchain = pkgs.rust-bin.stable."1.80.0".default;
+        _rustPlatform = pkgs.makeRustPlatform {
+          rustc = _rustToolchain;
+          cargo = _rustToolchain;
+        };
+        manifest = (pkgs.lib.importTOML ./Cargo.toml).package;
       in {
+        packages = {
+          rust-gan = _rustPlatform.buildRustPackage {
+            pname = manifest.name;
+            inherit (manifest) version;
+
+            src = pkgs.lib.cleanSource ./.;
+            
+            cargoLock.lockFile = ./Cargo.lock;
+            buildInputs = with pkgs; [
+              linuxPackages.nvidia_x11
+              cudatoolkit
+              python311
+              python311Packages.torch-bin
+              python311Packages.pillow
+            ];
+
+          };
+          default = self.packages.${system}.rust-gan;
+        };
         devShells.default = with pkgs; mkShell {
           buildInputs = [
-            rust-bin.stable."1.80.0".default
+            _rustToolchain
             linuxPackages.nvidia_x11
             cudatoolkit
             python311

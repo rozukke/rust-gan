@@ -20,6 +20,10 @@ struct Args {
     #[arg(long)]
     output: Option<String>,
 
+    /// Path to model file
+    #[arg(long)]
+    model: String,
+
     /// Use half precision for upscaling (faster, lower quality)
     #[arg(long, value_name = "half")]
     half_precision: bool,
@@ -36,23 +40,6 @@ enum Device {
 const DEFAULT_INPUT: &str = "./input/lowres.png";
 const DEFAULT_OUTPUT: &str = "./input/highres.png";
 
-/// Get model from models folder without having to specify name
-fn search_model(folder_path: &str, extension: &str) -> Option<std::path::PathBuf> {
-    info!("Searching {} for model files...", folder_path);
-    let path = Path::new(folder_path);
-    for entry in fs::read_dir(path).expect("Failed to read directory") {
-        let entry = entry.expect("Failed to read directory entry");
-        let path = entry.path();
-        if path.extension().and_then(|ext| ext.to_str()) == Some(extension) {
-            if let Some(path_str) = path.to_str() {
-                info!("Found model file: {}", path_str);
-            }
-            return Some(path);
-        }
-    }
-    None
-}
-
 fn main() -> Result<(), ()> {
     // Output logs to console
     tracing::subscriber::set_global_default(FmtSubscriber::builder().with_target(false).finish())
@@ -62,19 +49,21 @@ fn main() -> Result<(), ()> {
     let mut use_cpu = args.device == Device::Cpu;
     let input_path = args.input.unwrap_or(String::from(DEFAULT_INPUT));
     let output_path = args.output.unwrap_or(String::from(DEFAULT_OUTPUT));
-    let model_path = match search_model(concat!(env!("CARGO_MANIFEST_DIR"), "/model"), "pth") {
-        Some(model) => model.into_os_string(),
-        _ => {
-            error!("Could not find suitable model file in 'model' folder. Expected a '.pth' file extension.");
-            return Err(());
-        }
-    };
+    let model_path = args.model;
+    if !Path::new(model_path.as_str()).exists() {
+        error!("Could not find model file. Exiting...");
+        return Err(());
+    }
     let half_precision = args.half_precision;
 
-    // Import Python code from subdir
-    let pysrc_path = Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/pysrc"));
+    // Import Python code from subdir - THIS IS A HACK. needs fixing.
+    let pysrc_path = Path::new("./pysrc");
     let infer_src = fs::read_to_string(pysrc_path.join("main.py")).map_err(|err| {
-        error!("Could not open file for reading: {}", err);
+        error!(
+            "Could not open {} for reading: {}",
+            pysrc_path.display(),
+            err
+        );
     })?;
 
     Python::with_gil(|py| -> PyResult<Py<PyAny>> {
