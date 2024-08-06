@@ -1,7 +1,7 @@
 use clap::{Parser, ValueEnum};
 use pyo3::{prelude::*, types::PyList};
-use std::fs;
 use std::path::Path;
+use std::{fs, path::PathBuf};
 use tracing::{error, info, span, warn, Level};
 use tracing_subscriber::FmtSubscriber;
 
@@ -56,8 +56,17 @@ fn main() -> Result<(), ()> {
     }
     let half_precision = args.half_precision;
 
-    // Import Python code from subdir - THIS IS A HACK. needs fixing.
-    let pysrc_path = Path::new("./pysrc");
+    let pysrc_path = match std::env::var("PY_GAN_PATH") {
+        Ok(pypath) => {
+            info!("Found python sources at {}", pypath);
+            PathBuf::from(pypath)
+        },
+        Err(_) => {
+            error!("Could not find ENV location for Python sources.");
+            return Err(());
+        }
+    };
+
     let infer_src = fs::read_to_string(pysrc_path.join("main.py")).map_err(|err| {
         error!(
             "Could not open {} for reading: {}",
