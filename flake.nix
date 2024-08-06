@@ -34,6 +34,7 @@
           cargo = _rustToolchain;
         };
         manifest = (pkgs.lib.importTOML ./Cargo.toml).package;
+        _python311 = (pkgs.python311.withPackages (py: with py; [ torch-bin pillow ]));
       in {
         packages = {
           rust-gan = _rustPlatform.buildRustPackage {
@@ -44,13 +45,19 @@
 
             cargoLock.lockFile = ./Cargo.lock;
             nativeBuildInputs = with pkgs; [ makeWrapper ];
-            buildInputs = with pkgs; [
+            propagatedBuildInputs = with pkgs; [
               linuxPackages.nvidia_x11
               cudatoolkit
-              python311
-              python311Packages.torch-bin
-              python311Packages.pillow
+              _python311 
             ];
+            
+            env = {
+              PYO3_PYTHON = "${_python311}/bin/python";
+            };
+
+            preCheck = ''
+              export RUST_BACKTRACE=1 
+            '';
 
             # Makes location of Python sources available to the packaged Rust
             postInstall = ''
