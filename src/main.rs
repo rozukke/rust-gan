@@ -57,7 +57,10 @@ fn main() -> Result<(), ()> {
     let half_precision = args.half_precision;
 
     let pysrc_path = match std::env::var("PY_GAN_PATH") {
-        Ok(pypath) => PathBuf::from(pypath),
+        Ok(pypath) => {
+            info!("Found python sources at {}", pypath);
+            PathBuf::from(pypath)
+        },
         Err(_) => {
             error!("Could not find ENV location for Python sources.");
             return Err(());

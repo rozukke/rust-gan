@@ -28,13 +28,16 @@
             cudaSupport = true;
           };
         };
+
         _rustToolchain = pkgs.rust-bin.stable."1.80.0".default;
         _rustPlatform = pkgs.makeRustPlatform {
           rustc = _rustToolchain;
           cargo = _rustToolchain;
         };
-        manifest = (pkgs.lib.importTOML ./Cargo.toml).package;
         _python311 = (pkgs.python311.withPackages (py: with py; [ torch-bin pillow ]));
+
+        manifest = (pkgs.lib.importTOML ./Cargo.toml).package;
+
       in {
         packages = {
           rust-gan = _rustPlatform.buildRustPackage {
@@ -52,7 +55,8 @@
             ];
             
             env = {
-              PYO3_PYTHON = "${_python311}/bin/python";
+              PYO3_PYTHON = "${_python311}/bin/python3";
+              PY_GAN_PATH = "${pygan}";
             };
 
             preCheck = ''
@@ -62,7 +66,10 @@
             # Makes location of Python sources available to the packaged Rust
             postInstall = ''
               for i in `find $out/bin -maxdepth 1 -type f -executable`; do
-                wrapProgram $i --set PY_GAN_PATH ${pygan}
+                wrapProgram $i --set PY_GAN_PATH ${pygan} \
+                  --set PYO3_PYTHON ${_python311}/bin/python3 \
+                  --prefix PATH : ${pkgs.lib.makeBinPath [ _python311 ]} \
+                  --prefix LD_LIBRARY_PATH : /usr/lib/wsl/lib:${pkgs.lib.makeBinPath [ pkgs.linuxPackages.nvidia_x11 ]}
               done
             '';
           };
@@ -77,9 +84,7 @@
             _rustToolchain
             linuxPackages.nvidia_x11
             cudatoolkit
-            python311
-            python311Packages.torch
-            python311Packages.pillow
+            _python311
           ];
 
           env = {
