@@ -47,8 +47,14 @@ fn main() -> Result<(), ()> {
 
     let args = Args::parse();
     let mut use_cpu = args.device == Device::Cpu;
+
     let input_path = args.input.unwrap_or(String::from(DEFAULT_INPUT));
+    if !Path::new(input_path.as_str()).exists() {
+        error!("Could not find input image. Exiting...");
+        return Err(());
+    }
     let output_path = args.output.unwrap_or(String::from(DEFAULT_OUTPUT));
+
     let model_path = args.model;
     if !Path::new(model_path.as_str()).exists() {
         error!("Could not find model file. Exiting...");
