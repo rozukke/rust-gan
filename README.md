@@ -24,4 +24,9 @@ but might be added later.
 - Use half precision with the flag `--half-precision`. Will be slower on CPU than full precision.
 
 ### Using Nix package
-- It should be possible to run the nix package using `nix run ./ -- gpu --model /path/to/model`. The package is in a functional state, but isn't currently working 100% as might be expected.
+- It should be possible to run the nix package using `nix run ./ -- gpu --model /path/to/model`. This is currently tested with a local clone
+(remote flake may not work as expected).
+
+> [!IMPORTANT]  
+> There seems to be a bug with some recent nightly Nix releases regarding local paths. To fix the package not building,
+> the solution seems to be to force input fetching. `cannot fetch input 'path:./pysrc...`
