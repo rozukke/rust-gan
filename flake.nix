@@ -4,6 +4,8 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/release-24.05";
     systems.url = "github:nix-systems/x86_64-linux";
+    pygan.url = "path:./pysrc";
+    pygan.flake = false;
     flake-utils = {
       url = "github:numtide/flake-utils";
       inputs.systems.follows = "systems";
@@ -15,7 +17,7 @@
     bash-prompt-prefix = "(cuda-shell) ";
   };
 
-  outputs = { self, nixpkgs, rust-overlay, flake-utils, ... }:
+  outputs = { self, pygan, nixpkgs, rust-overlay, flake-utils, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         overlays = [ (import rust-overlay) ];
@@ -39,8 +41,9 @@
             inherit (manifest) version;
 
             src = pkgs.lib.cleanSource ./.;
-            
+
             cargoLock.lockFile = ./Cargo.lock;
+            nativeBuildInputs = with pkgs; [ makeWrapper ];
             buildInputs = with pkgs; [
               linuxPackages.nvidia_x11
               cudatoolkit
@@ -49,18 +52,32 @@
               python311Packages.pillow
             ];
 
+            # Makes location of Python sources available to the packaged Rust
+            postInstall = ''
+              for i in `find $out/bin -maxdepth 1 -type f -executable`; do
+                wrapProgram $i --set PY_GAN_PATH ${pygan}
+              done
+            '';
           };
+
+          # Default target for nix commands
           default = self.packages.${system}.rust-gan;
+
         };
+
         devShells.default = with pkgs; mkShell {
           buildInputs = [
             _rustToolchain
             linuxPackages.nvidia_x11
             cudatoolkit
             python311
-            python311Packages.torch-bin
+            python311Packages.torch
             python311Packages.pillow
           ];
+
+          env = {
+            PY_GAN_PATH = "${pygan}";
+          };
 
           shellHook = ''
             export CUDA_HOME=${pkgs.cudatoolkit}
