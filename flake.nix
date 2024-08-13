@@ -3,9 +3,13 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/release-24.05";
+    # Hack to make flake utils build for only one system
     systems.url = "github:nix-systems/x86_64-linux";
+
+    # Hack to make local files available without rewriting the install step
     pygan.url = "path:./pysrc";
     pygan.flake = false;
+
     flake-utils = {
       url = "github:numtide/flake-utils";
       inputs.systems.follows = "systems";
@@ -13,6 +17,7 @@
     rust-overlay.url = "github:oxalica/rust-overlay";
   };
 
+  # Conda-style prefix to make being inside a shell less confusing
   nixConfig = {
     bash-prompt-prefix = "(cuda-shell) ";
   };
@@ -28,14 +33,18 @@
             cudaSupport = true;
           };
         };
-
+        
+        # Make package build step use exact specified Rust version
+        # Note that another hack is required to make the std library visible for code editors.
         _rustToolchain = pkgs.rust-bin.stable."1.80.0".default;
         _rustPlatform = pkgs.makeRustPlatform {
           rustc = _rustToolchain;
           cargo = _rustToolchain;
         };
+        # Hack to make Python work since having the packages individually specified can break apparently
         _python311 = (pkgs.python311.withPackages (py: with py; [ torch-bin pillow ]));
 
+        # Use Cargo manifest for package configuration
         manifest = (pkgs.lib.importTOML ./Cargo.toml).package;
 
       in {
@@ -48,12 +57,14 @@
 
             cargoLock.lockFile = ./Cargo.lock;
             nativeBuildInputs = with pkgs; [ makeWrapper ];
+            # Not sure if propagatedBuildInputs is a requirement here but don't want to touch
             propagatedBuildInputs = with pkgs; [
               linuxPackages.nvidia_x11
               cudatoolkit
               _python311 
             ];
             
+            # Make local file flake input available to program and Python available to PyO3
             env = {
               PYO3_PYTHON = "${_python311}/bin/python3";
               PY_GAN_PATH = "${pygan}";
@@ -64,6 +75,8 @@
             '';
 
             # Makes location of Python sources available to the packaged Rust
+            # Prepending the path is a hard requirement as otherwise the wrong Python interpreter is used.
+            # CUDA will not work without manually setting LD Path either. Very fun.
             postInstall = ''
               for i in `find $out/bin -maxdepth 1 -type f -executable`; do
                 wrapProgram $i --set PY_GAN_PATH ${pygan} \
